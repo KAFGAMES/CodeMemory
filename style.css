@@ -1,0 +1,43 @@
+body {
+    margin: 0;
+    padding: 0.5rem;
+    width: 300px; /* ポップアップの横幅 */
+    font-family: sans-serif;
+  }
+  
+  h1 {
+    font-size: 1.2rem;
+    margin-top: 0;
+    text-align: center;
+  }
+  
+  form > div {
+    margin-bottom: 0.5rem;
+  }
+  
+  #skill-list {
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .skill-item {
+    background: #f9f9f9;
+    margin: 0.25rem 0;
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
+  .skill-item h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .skill-item p {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+  }
+  .skill-item small {
+    display: block;
+    font-size: 0.7rem;
+    margin-top: 0.25rem;
+    color: #555;
+  }
+  

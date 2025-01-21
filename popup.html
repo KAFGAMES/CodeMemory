@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Skill Manager Extension</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>スキル管理</h1>
+
+  <!-- フォーム -->
+  <form id="skill-form">
+    <div>
+      <label for="title">タイトル:</label>
+      <input id="title" type="text" required />
+    </div>
+    <div>
+      <label for="content">内容:</label>
+      <textarea id="content" rows="3"></textarea>
+    </div>
+    <button type="submit">登録</button>
+  </form>
+
+  <hr />
+
+  <!-- スキル一覧表示用 -->
+  <div id="skill-list"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
