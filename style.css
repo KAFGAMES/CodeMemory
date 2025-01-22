@@ -1,43 +1,156 @@
 body {
-    margin: 0;
-    padding: 0.5rem;
-    width: 300px; /* ポップアップの横幅 */
-    font-family: sans-serif;
-  }
-  
-  h1 {
-    font-size: 1.2rem;
-    margin-top: 0;
-    text-align: center;
-  }
-  
-  form > div {
-    margin-bottom: 0.5rem;
-  }
-  
-  #skill-list {
-    max-height: 200px;
-    overflow-y: auto;
-  }
-  
-  .skill-item {
-    background: #f9f9f9;
-    margin: 0.25rem 0;
-    padding: 0.5rem;
-    border-radius: 4px;
-  }
-  .skill-item h2 {
-    margin: 0;
-    font-size: 1rem;
-  }
-  .skill-item p {
-    margin: 0.25rem 0 0;
-    font-size: 0.9rem;
-  }
-  .skill-item small {
-    display: block;
-    font-size: 0.7rem;
-    margin-top: 0.25rem;
-    color: #555;
-  }
-  
+  margin: 0;
+  padding: 0.5rem;
+  width: 320px; /* ポップアップの横幅（適宜調整） */
+  font-family: sans-serif;
+}
+
+h1 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  text-align: center;
+}
+
+form {
+  background: #f3f3f3;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+form > div {
+  margin-bottom: 0.5rem;
+}
+
+label {
+  display: inline-block;
+  width: 70px;
+  font-size: 0.9rem;
+}
+
+#search-sort-area {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.search-box, .sort-box {
+  display: flex;
+  align-items: center;
+}
+
+.search-box label,
+.sort-box label {
+  margin-right: 4px;
+  font-size: 0.8rem;
+}
+
+#search-input {
+  width: 80px;
+}
+
+#export-import-box {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+#skill-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.skill-item {
+  background: #f9f9f9;
+  margin: 0.25rem 0;
+  padding: 0.5rem;
+  border-radius: 4px;
+  position: relative;
+}
+
+.skill-item h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.skill-item p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+}
+.skill-item small {
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 0.25rem;
+  color: #555;
+}
+
+.skill-actions {
+  margin-top: 0.25rem;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.skill-actions button {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.3rem;
+}
+
+.pin-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+.pin-icon.gray {
+  color: #aaa;
+}
+.pin-icon.gold {
+  color: gold;
+}
+
+/* 編集フォームの簡易モーダル風 */
+.edit-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  z-index: 999;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.edit-modal h2 {
+  margin-top: 0;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.edit-modal .modal-field {
+  margin-bottom: 0.5rem;
+}
+
+.edit-modal label {
+  width: auto;
+}
+
+.modal-buttons {
+  text-align: right;
+  margin-top: 0.5rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.3);
+  z-index: 998;
+  display: none;
+}
+
+.modal-backdrop.active {
+  display: block;
+}

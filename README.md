@@ -6,3 +6,4 @@ git branch -M main
 git push -u origin main
 
 chrome://extensions/
+「パッケージ化されていない拡張機能を読み込む」

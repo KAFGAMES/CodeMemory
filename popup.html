@@ -8,7 +8,7 @@
 <body>
   <h1>スキル管理</h1>
 
-  <!-- フォーム -->
+  <!-- 登録フォーム -->
   <form id="skill-form">
     <div>
       <label for="title">タイトル:</label>
@@ -16,10 +16,51 @@
     </div>
     <div>
       <label for="content">内容:</label>
-      <textarea id="content" rows="3"></textarea>
+      <textarea id="content" rows="2"></textarea>
+    </div>
+    <div>
+      <label for="category">カテゴリー:</label>
+      <input id="category" type="text" />
+    </div>
+    <div>
+      <label for="tags">タグ:</label>
+      <input id="tags" type="text" placeholder="カンマ区切り可" />
+    </div>
+    <div>
+      <label for="pinned">ピン留め:</label>
+      <input id="pinned" type="checkbox" />
     </div>
     <button type="submit">登録</button>
   </form>
+
+  <hr />
+
+  <!-- 検索・ソート操作エリア -->
+  <div id="search-sort-area">
+    <div class="search-box">
+      <label for="search-input">検索(カテゴリ/タグ):</label>
+      <input id="search-input" type="text" />
+      <button id="search-btn">検索</button>
+    </div>
+
+    <div class="sort-box">
+      <label for="sort-order">日付ソート:</label>
+      <select id="sort-order">
+        <option value="desc">新しい順</option>
+        <option value="asc">古い順</option>
+      </select>
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- エクスポート / インポートボタン -->
+  <div id="export-import-box">
+    <button id="export-btn">エクスポート</button>
+    <!-- 非表示のファイル選択 -->
+    <input type="file" id="import-file" accept="application/json" style="display: none;" />
+    <button id="import-btn">インポート</button>
+  </div>
 
   <hr />
 
