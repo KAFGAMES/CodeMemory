@@ -414,23 +414,7 @@ function saveDraftToLocalStorage() {
   localStorage.setItem('skillDraft', JSON.stringify(draft));
 }
 
-// 下書きを読み込む
-function loadDraftFromLocalStorage() {
-  const draftStr = localStorage.getItem('skillDraft');
-  if (!draftStr) return;
-  try {
-    const draft = JSON.parse(draftStr);
-    if (draft && typeof draft === 'object') {
-      document.getElementById('title').value = draft.title || '';
-      document.getElementById('content').value = draft.content || '';
-      document.getElementById('category').value = draft.category || '';
-      document.getElementById('tags').value = draft.tags || '';
-      document.getElementById('pinned').checked = !!draft.pinned;
-    }
-  } catch (err) {
-    console.warn('Error parsing skillDraft:', err);
-  }
-}
+
 
 // 下書きをクリア
 function clearDraftFromLocalStorage() {
@@ -728,21 +712,93 @@ function setupClipboardAutoAppend() {
 }
 
 // =============================
+// チャット風入力欄のセットアップ
+// =============================
+function setupChatInput() {
+  const chatInput = document.getElementById('chat-input');
+  const pinnedChk = document.getElementById('chat-pinned');
+
+  // 下書き復元
+  loadDraftFromLocalStorage();  
+
+  // 入力中にドラフト保存
+  chatInput.addEventListener('input', saveChatDraft);
+  pinnedChk.addEventListener('change', saveChatDraft);
+
+  // Enter送信 / Shift+Enterで改行
+  chatInput.addEventListener('keydown', async (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault(); // 改行を防ぐ
+      const content = chatInput.value.trim();
+      if (!content) return;
+
+      // pinned情報
+      const pinned = pinnedChk.checked;
+
+      // DB保存: title="ChatMemo", category="", tags=""
+      await addSkill("ChatMemo", content, "", "", pinned);
+
+      // 送信後: 入力欄リセット & ドラフトクリア
+      chatInput.value = '';
+      pinnedChk.checked = false;
+      clearDraftFromLocalStorage(); 
+
+      // 再描画
+      render();
+      buildCategoryTagOptions();
+    }
+  });
+}
+
+// 下書き保存: chat-inputの内容をlocalStorageに記憶
+function saveChatDraft() {
+  const draft = {
+    content: document.getElementById('chat-input').value,
+    pinned: document.getElementById('chat-pinned').checked
+  };
+  localStorage.setItem('chatDraft', JSON.stringify(draft));
+}
+
+// 下書きロード
+function loadDraftFromLocalStorage() {
+  const draftStr = localStorage.getItem('chatDraft');
+  if (!draftStr) return;
+  try {
+    const draft = JSON.parse(draftStr);
+    if (draft && typeof draft === 'object') {
+      document.getElementById('chat-input').value = draft.content || '';
+      document.getElementById('chat-pinned').checked = !!draft.pinned;
+    }
+  } catch (err) {
+    console.warn('Error parsing chatDraft:', err);
+  }
+}
+
+// 下書きクリア
+function clearDraftFromLocalStorage() {
+  localStorage.removeItem('chatDraft');
+}
+
+// =============================
 // エントリーポイント
 // =============================
 document.addEventListener('DOMContentLoaded', async () => {
   await initDB();
+  console.log('initDB 完了')
 
-  // 下書き復元
-  loadDraftFromLocalStorage();
-
+  // 初期セットアップ
   setupTabs();
-  setupForm();
   setupFilterArea();
   setupControls();
   await buildCategoryTagOptions();
+  console.log('カテゴリタグ構築完了')
+  //setupClipboardAutoAppend();
 
-  setupClipboardAutoAppend();
+  // チャットUIなど使うなら:
+  // setupChatInput();
 
-  render(); // 初回描画
+  // ★ 最初に ALL を明示し、即座に表示
+  currentTab = 'all';
+  document.querySelector('.tab-btn[data-target="all"]')?.classList.add('active');
+  await render(); // 確実に非同期処理が完了した後に描画
 });

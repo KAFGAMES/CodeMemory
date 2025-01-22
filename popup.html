@@ -15,33 +15,6 @@
     <button class="tab-btn" data-target="monthly">Monthly</button>
   </div>
 
-  <!-- 登録フォーム -->
-  <form id="skill-form">
-    <div>
-      <label for="title">タイトル:</label>
-      <input id="title" type="text" required />
-    </div>
-    <div>
-      <label for="content">内容:</label>
-      <textarea id="content" rows="2"></textarea>
-    </div>
-    <div>
-      <label for="category">カテゴリー:</label>
-      <input id="category" type="text" />
-    </div>
-    <div>
-      <label for="tags">タグ:</label>
-      <input id="tags" type="text" placeholder="カンマ区切り可" />
-    </div>
-    <div>
-      <label for="pinned">ピン留め:</label>
-      <input id="pinned" type="checkbox" />
-    </div>
-    <button type="submit">登録</button>
-  </form>
-
-  <hr />
-
   <!-- 絞り込み: カテゴリー & タグ -->
   <div id="filter-area">
     <div>
@@ -84,7 +57,15 @@
   <div id="skill-list"></div>
   <div id="monthly-view" style="display: none;"></div>
 
-  <!-- 編集モーダルなど -->
+  <!-- チャット風メモ入力エリア (一番下) -->
+  <div id="chat-input-area">
+    <textarea id="chat-input" rows="1" placeholder="メモを入力（Enterで送信、Shift+Enterで改行）"></textarea>
+    <div class="pinned-check">
+      <label for="chat-pinned">★Pin</label>
+      <input type="checkbox" id="chat-pinned" />
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

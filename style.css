@@ -334,3 +334,36 @@ button[type="submit"]:hover {
 .month-list.open {
   display: block;
 }
+/* 追加: チャット入力エリア */
+#chat-input-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.3rem;
+  background: #001100;
+  border: 1px solid #00ff00;
+  border-radius: 4px;
+}
+
+#chat-input {
+  flex: 1;
+  background: #000000;
+  color: #00ff00;
+  border: 1px solid #00ff00;
+  font-family: 'Share Tech Mono', monospace;
+  padding: 0.4rem;
+  resize: none; /* サイズはユーザーが変えられないように */
+  min-height: 32px; /* 最低の高さ */
+  max-height: 100px; /* 伸びすぎ防止 */
+  overflow-y: auto;
+}
+
+.pinned-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #00ff00;
+}
+
