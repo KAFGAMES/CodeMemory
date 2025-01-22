@@ -1,8 +1,28 @@
 body {
   margin: 0;
   padding: 0.5rem;
-  width: 320px; /* ポップアップの横幅（適宜調整） */
+  width: 340px; /* ポップアップの横幅（適宜調整） */
   font-family: sans-serif;
+}
+
+/* タブ */
+#tab-container {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.tab-btn {
+  flex: 1;
+  padding: 0.4rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background: #eee;
+}
+.tab-btn.active {
+  background: #fff;
+  border-bottom: 2px solid #007bff;
 }
 
 h1 {
@@ -27,37 +47,25 @@ label {
   font-size: 0.9rem;
 }
 
-#search-sort-area {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.search-box, .sort-box {
+#filter-area, #control-area {
   display: flex;
   align-items: center;
-}
-
-.search-box label,
-.sort-box label {
-  margin-right: 4px;
-  font-size: 0.8rem;
-}
-
-#search-input {
-  width: 80px;
-}
-
-#export-import-box {
-  display: flex;
   justify-content: space-between;
   margin-bottom: 0.5rem;
+}
+#filter-area div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 #skill-list {
-  max-height: 250px;
+  max-height: 220px;
   overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background: #fff;
 }
 
 .skill-item {
@@ -152,5 +160,36 @@ label {
 }
 
 .modal-backdrop.active {
+  display: block;
+}
+
+/* Monthlyビュー */
+#monthly-view {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.5rem;
+  background: #fff;
+}
+
+.month-block {
+  margin-bottom: 1rem;
+}
+
+.month-header {
+  font-weight: bold;
+  margin: 0.25rem 0;
+  cursor: pointer;
+  background: #eee;
+  padding: 0.3rem;
+  border-radius: 4px;
+}
+
+.month-list {
+  margin-left: 1rem;
+  display: none;
+}
+.month-list.open {
   display: block;
 }

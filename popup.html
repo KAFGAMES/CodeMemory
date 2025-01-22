@@ -8,6 +8,13 @@
 <body>
   <h1>スキル管理</h1>
 
+  <!-- タブ切り替え -->
+  <div id="tab-container">
+    <button class="tab-btn active" data-target="all">All</button>
+    <button class="tab-btn" data-target="pinned">Pinned</button>
+    <button class="tab-btn" data-target="monthly">Monthly</button>
+  </div>
+
   <!-- 登録フォーム -->
   <form id="skill-form">
     <div>
@@ -35,38 +42,49 @@
 
   <hr />
 
-  <!-- 検索・ソート操作エリア -->
-  <div id="search-sort-area">
-    <div class="search-box">
-      <label for="search-input">検索(カテゴリ/タグ):</label>
-      <input id="search-input" type="text" />
-      <button id="search-btn">検索</button>
-    </div>
-
-    <div class="sort-box">
-      <label for="sort-order">日付ソート:</label>
-      <select id="sort-order">
-        <option value="desc">新しい順</option>
-        <option value="asc">古い順</option>
+  <!-- 絞り込み: カテゴリー & タグ -->
+  <div id="filter-area">
+    <div>
+      <label for="category-select">Category:</label>
+      <select id="category-select">
+        <option value="">(All)</option>
       </select>
     </div>
+    <div>
+      <label for="tag-select">Tag:</label>
+      <select id="tag-select">
+        <option value="">(All)</option>
+      </select>
+    </div>
+    <button id="clear-filter-btn">Clear</button>
   </div>
 
   <hr />
 
-  <!-- エクスポート / インポートボタン -->
-  <div id="export-import-box">
-    <button id="export-btn">エクスポート</button>
-    <!-- 非表示のファイル選択 -->
-    <input type="file" id="import-file" accept="application/json" style="display: none;" />
-    <button id="import-btn">インポート</button>
+  <!-- ソート操作 & エクスポート/インポート -->
+  <div id="control-area">
+    <div>
+      <label for="sort-order">日付ソート:</label>
+      <select id="sort-order">
+        <option value="asc">古い順</option>
+        <option value="desc">新しい順</option>
+      </select>
+    </div>
+    <div id="export-import-box">
+      <button id="export-btn">エクスポート</button>
+      <!-- 非表示のファイル選択 -->
+      <input type="file" id="import-file" accept="application/json" style="display: none;" />
+      <button id="import-btn">インポート</button>
+    </div>
   </div>
 
   <hr />
 
-  <!-- スキル一覧表示用 -->
+  <!-- スキル一覧表示 or Monthly表示用 -->
   <div id="skill-list"></div>
+  <div id="monthly-view" style="display: none;"></div>
 
+  <!-- 編集モーダルなど -->
   <script src="popup.js"></script>
 </body>
 </html>
