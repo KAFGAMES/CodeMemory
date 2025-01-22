@@ -795,7 +795,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   //setupClipboardAutoAppend();
 
   // チャットUIなど使うなら:
-  // setupChatInput();
+   setupChatInput();
 
   // ★ 最初に ALL を明示し、即座に表示
   currentTab = 'all';
