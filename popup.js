@@ -13,10 +13,12 @@ let selectedTag = '';
 // タブ管理
 let currentTab = 'all';  // "all", "pinned", "monthly"
 
+// メモ途中保存用: 最後に自動追記したクリップボード内容を保持
+let lastClipboard = '';
 
-/**
- * IndexedDB 初期化
- */
+// =============================
+// IndexedDB 初期化
+// =============================
 function initDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('skillDB', 3);
@@ -50,7 +52,7 @@ function addSkill(title, content, category, tags, pinned) {
       title: title,
       content: content,
       category: category || '',
-      tags: tags || '', // 文字列で保存
+      tags: tags || '',
       pinned: pinned || false,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -151,8 +153,6 @@ async function renderSkillList() {
     skills = skills.filter(s => s.category === selectedCategory);
   }
   if (selectedTag) {
-    // タグはカンマ区切りで複数ある可能性があるため、部分一致チェック
-    // (厳密に "tag1,tag2" のようにマッチさせたい場合は工夫が必要)
     skills = skills.filter(s => s.tags.split(',').map(t => t.trim()).includes(selectedTag));
   }
 
@@ -161,15 +161,11 @@ async function renderSkillList() {
     skills = skills.filter(s => s.pinned);
   }
 
-  // ソート（ピン留めタブでもさらに古い順/新しい順が適用される想定）
+  // ソート
   skills.sort((a, b) => {
     const timeA = new Date(a.createdAt).getTime();
     const timeB = new Date(b.createdAt).getTime();
-    if (sortOrder === 'asc') {
-      return timeA - timeB; // 古い順
-    } else {
-      return timeB - timeA; // 新しい順
-    }
+    return (sortOrder === 'asc') ? (timeA - timeB) : (timeB - timeA);
   });
 
   skills.forEach(skill => {
@@ -240,10 +236,9 @@ async function renderMonthlyView() {
   const monthlyEl = document.getElementById('monthly-view');
   monthlyEl.innerHTML = '';
 
-  // 全スキル取得
   let skills = await getSkills();
 
-  // フィルタ（category/tagは共通）
+  // フィルタ（category/tag）
   if (selectedCategory) {
     skills = skills.filter(s => s.category === selectedCategory);
   }
@@ -255,14 +250,14 @@ async function renderMonthlyView() {
   skills.sort((a, b) => {
     const timeA = new Date(a.createdAt).getTime();
     const timeB = new Date(b.createdAt).getTime();
-    return sortOrder === 'asc' ? timeA - timeB : timeB - timeA;
+    return (sortOrder === 'asc') ? (timeA - timeB) : (timeB - timeA);
   });
 
-  // 年月ごとにグルーピング: { '2025-01': [...], '2025-02': [...], ... }
+  // 年月ごとにグルーピング
   const groupMap = {};
   skills.forEach(s => {
     const d = new Date(s.createdAt);
-    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; // e.g. "2025-01"
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!groupMap[ym]) {
       groupMap[ym] = [];
     }
@@ -271,14 +266,9 @@ async function renderMonthlyView() {
 
   // 年月キーをソート
   const sortedKeys = Object.keys(groupMap).sort((a, b) => {
-    if (sortOrder === 'asc') {
-      return a.localeCompare(b);
-    } else {
-      return b.localeCompare(a);
-    }
+    return (sortOrder === 'asc') ? a.localeCompare(b) : b.localeCompare(a);
   });
 
-  // 各年月ブロック生成
   sortedKeys.forEach(ym => {
     const [year, month] = ym.split('-');
     const headingText = `${year}年${Number(month)}月`;
@@ -301,7 +291,7 @@ async function renderMonthlyView() {
       const item = document.createElement('div');
       item.className = 'skill-item';
 
-      // ピン留めアイコン
+      // ピン留め
       const pinIcon = document.createElement('span');
       pinIcon.className = 'pin-icon ' + (skill.pinned ? 'gold' : 'gray');
       pinIcon.textContent = '★';
@@ -370,6 +360,8 @@ async function renderMonthlyView() {
 // =============================
 function setupForm() {
   const form = document.getElementById('skill-form');
+
+  // (1) フォーム送信
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const title = document.getElementById('title').value.trim();
@@ -385,6 +377,9 @@ function setupForm() {
 
     await addSkill(title, content, category, tags, pinned);
 
+    // 登録成功→下書きをクリア
+    clearDraftFromLocalStorage();
+
     // フォーム初期化
     document.getElementById('title').value = '';
     document.getElementById('content').value = '';
@@ -393,8 +388,53 @@ function setupForm() {
     document.getElementById('pinned').checked = false;
 
     render();
-    buildCategoryTagOptions(); // 新しく追加したカテゴリ/タグを反映
+    buildCategoryTagOptions();
   });
+
+  // (2) 入力のたびに下書きを保存
+  ['title', 'content', 'category', 'tags', 'pinned'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.type === 'checkbox') {
+      el.addEventListener('change', saveDraftToLocalStorage);
+    } else {
+      el.addEventListener('input', saveDraftToLocalStorage);
+    }
+  });
+}
+
+// 下書きを保存 (localStorage)
+function saveDraftToLocalStorage() {
+  const draft = {
+    title: document.getElementById('title').value,
+    content: document.getElementById('content').value,
+    category: document.getElementById('category').value,
+    tags: document.getElementById('tags').value,
+    pinned: document.getElementById('pinned').checked
+  };
+  localStorage.setItem('skillDraft', JSON.stringify(draft));
+}
+
+// 下書きを読み込む
+function loadDraftFromLocalStorage() {
+  const draftStr = localStorage.getItem('skillDraft');
+  if (!draftStr) return;
+  try {
+    const draft = JSON.parse(draftStr);
+    if (draft && typeof draft === 'object') {
+      document.getElementById('title').value = draft.title || '';
+      document.getElementById('content').value = draft.content || '';
+      document.getElementById('category').value = draft.category || '';
+      document.getElementById('tags').value = draft.tags || '';
+      document.getElementById('pinned').checked = !!draft.pinned;
+    }
+  } catch (err) {
+    console.warn('Error parsing skillDraft:', err);
+  }
+}
+
+// 下書きをクリア
+function clearDraftFromLocalStorage() {
+  localStorage.removeItem('skillDraft');
 }
 
 // =============================
@@ -460,11 +500,11 @@ function setupFilterArea() {
 }
 
 // =============================
-// ソート + エクポート/インポート
+// ソート + エクスポート/インポート
 // =============================
 function setupControls() {
   const sortSelect = document.getElementById('sort-order');
-  sortSelect.value = sortOrder; // 初期値 "asc"
+  sortSelect.value = sortOrder;
 
   sortSelect.addEventListener('change', () => {
     sortOrder = sortSelect.value;
@@ -541,12 +581,9 @@ function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
   tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
-      // 全タブのactiveを外し、このボタンだけactive
       tabButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-
-      // ターゲット
-      currentTab = btn.dataset.target; // "all", "pinned", "monthly"
+      currentTab = btn.dataset.target;
       render();
     });
   });
@@ -655,15 +692,57 @@ function closeEditModal() {
 }
 
 // =============================
+// クリップボードから自動追記
+// =============================
+
+/**
+ * フォーカス時やクリック時にクリップボードを読み取り、内容を未挿入なら追記する
+ */
+async function checkClipboardAndAppend() {
+  if (!navigator.clipboard) return; // ブラウザ対応状況など
+
+  try {
+    const text = await navigator.clipboard.readText();
+    if (text && text !== lastClipboard) {
+      lastClipboard = text;
+      // textarea に追記
+      const contentField = document.getElementById('content');
+      if (contentField) {
+        // すでに何かあれば改行を挿入
+        contentField.value += (contentField.value ? '\n' : '') + text;
+        saveDraftToLocalStorage(); // 途中保存も更新
+      }
+    }
+  } catch (err) {
+    console.warn('Clipboard read error:', err);
+  }
+}
+
+function setupClipboardAutoAppend() {
+  // ポップアップにフォーカスが戻ったらチェック
+  window.addEventListener('focus', checkClipboardAndAppend);
+
+  // あるいは、フォームをクリックしたときにもチェックしたいなら
+  const contentField = document.getElementById('content');
+  contentField.addEventListener('click', checkClipboardAndAppend);
+}
+
+// =============================
 // エントリーポイント
 // =============================
 document.addEventListener('DOMContentLoaded', async () => {
   await initDB();
+
+  // 下書き復元
+  loadDraftFromLocalStorage();
+
   setupTabs();
   setupForm();
   setupFilterArea();
   setupControls();
   await buildCategoryTagOptions();
+
+  setupClipboardAutoAppend();
 
   render(); // 初回描画
 });
