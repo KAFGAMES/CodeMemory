@@ -4,7 +4,7 @@
 let db;
 
 // ★ デフォルトは古い順("asc")にする
-let sortOrder = 'asc'; 
+let sortOrder = 'asc';
 
 // 検索条件
 let selectedCategory = '';
@@ -18,23 +18,28 @@ let currentTab = 'all'; // "all", "pinned", "monthly"
 // '1','2','3','4','5' ならそのレベルのみ表示
 let pinnedFilter = 'any';
 
-// メモ途中保存用: 最後に自動追記したクリップボード内容を保持
-let lastClipboard = '';
-
 // =============================
 // IndexedDB 初期化
 // =============================
 function initDB() {
   return new Promise((resolve, reject) => {
-    // DBバージョン: 4
-    const request = indexedDB.open('skillDB', 4);
+    // DBバージョン: 5 にアップ
+    const request = indexedDB.open('skillDB', 5);
 
     request.onupgradeneeded = (e) => {
       db = e.target.result;
+      const oldVersion = e.oldVersion;
+
       if (!db.objectStoreNames.contains('skillStore')) {
+        // 新規作成（初回）
         db.createObjectStore('skillStore', { keyPath: 'id', autoIncrement: true });
+      } else {
+        // すでに skillStore が存在
+        // oldVersion < 5 なら、既存データにも completed フィールドを扱えるようにする
+        // (実際は動的にフィールドを追加可能なので特別な作業は不要だが、
+        //  バージョンを上げておくことで将来的な拡張にも対応できる)
+        console.log('DBアップグレード:', oldVersion, '=>', 5);
       }
-      // 既存のstoreがある場合のマイグレーション等は省略
     };
 
     request.onsuccess = (e) => {
@@ -62,6 +67,7 @@ function addSkill(title, content, category, tags, pinnedLevel) {
       category: category || '',
       tags: tags || '',
       pinned: Number(pinnedLevel) || 0,
+      completed: false, // ★追加: 新規は未完了がデフォルト
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -79,7 +85,16 @@ function getSkills() {
     const tx = db.transaction(['skillStore'], 'readonly');
     const store = tx.objectStore('skillStore');
     const req = store.getAll();
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      // 既存データに completed が無い場合は false に補完
+      const result = req.result.map(item => {
+        if (item.completed === undefined) {
+          item.completed = false;
+        }
+        return item;
+      });
+      resolve(result);
+    };
     req.onerror = (e) => reject(e);
   });
 }
@@ -92,7 +107,13 @@ function getSkillById(id) {
     const tx = db.transaction(['skillStore'], 'readonly');
     const store = tx.objectStore('skillStore');
     const req = store.get(id);
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const skill = req.result;
+      if (skill && skill.completed === undefined) {
+        skill.completed = false;
+      }
+      resolve(skill);
+    };
     req.onerror = (e) => reject(e);
   });
 }
@@ -111,6 +132,7 @@ function updateSkill(id, newData) {
       ...skill,
       ...newData,
       pinned: (newData.pinned !== undefined) ? Number(newData.pinned) : skill.pinned,
+      completed: (newData.completed !== undefined) ? newData.completed : skill.completed,
       updatedAt: new Date(),
     };
 
@@ -206,12 +228,19 @@ async function renderSkillList() {
     const item = document.createElement('div');
     item.className = 'skill-item';
 
+    // ★ completed なら暗め色に
+    if (skill.completed) {
+      item.classList.add('completed');
+    }
+
     // ピン留めアイコン: ★1～★5を文字列化
     const pinSpan = document.createElement('span');
     pinSpan.className = 'pin-icon';
     pinSpan.textContent = getPinStarString(Number(skill.pinned));
     // クリックでレベルを1つ上げ(0～5ループ)
     pinSpan.addEventListener('click', () => {
+      // 完了済みならピン操作できないようにする場合はここでreturnしてもOK
+      // 今回は特に指定ないので、完了でも★の変更は可能(ただし完了すると再描画時に0に戻る)
       const newLevel = (Number(skill.pinned) + 1) % 6; // 0～5
       updateSkill(skill.id, { pinned: newLevel }).then(() => render());
     });
@@ -241,6 +270,12 @@ async function renderSkillList() {
     // 操作ボタン
     const actionsEl = document.createElement('div');
     actionsEl.className = 'skill-actions';
+
+    // ★ 完了/未完了 切り替えボタン
+    const toggleCompleteBtn = document.createElement('button');
+    toggleCompleteBtn.textContent = skill.completed ? '未完了' : '完了';
+    toggleCompleteBtn.addEventListener('click', () => toggleCompletion(skill));
+    actionsEl.appendChild(toggleCompleteBtn);
 
     const editBtn = document.createElement('button');
     editBtn.textContent = '編集';
@@ -331,6 +366,11 @@ async function renderMonthlyView() {
       const item = document.createElement('div');
       item.className = 'skill-item';
 
+      // 完了していればクラス付与
+      if (skill.completed) {
+        item.classList.add('completed');
+      }
+
       // ピン留めアイコン
       const pinSpan = document.createElement('span');
       pinSpan.className = 'pin-icon';
@@ -365,6 +405,12 @@ async function renderMonthlyView() {
       // 操作ボタン
       const actionsEl = document.createElement('div');
       actionsEl.className = 'skill-actions';
+
+      // 完了/未完了 切り替え
+      const toggleCompleteBtn = document.createElement('button');
+      toggleCompleteBtn.textContent = skill.completed ? '未完了' : '完了';
+      toggleCompleteBtn.addEventListener('click', () => toggleCompletion(skill));
+      actionsEl.appendChild(toggleCompleteBtn);
 
       const editBtn = document.createElement('button');
       editBtn.textContent = '編集';
@@ -401,9 +447,24 @@ async function renderMonthlyView() {
  */
 function getPinStarString(level) {
   if (!level) return '☆×5'; // 0ならピン無し表示
-  const full = '★★★★★'; 
+  const full = '★★★★★';
   const empty = '☆☆☆☆☆';
   return full.slice(0, level) + empty.slice(level);
+}
+
+// =============================
+// 完了/未完了のトグル
+// =============================
+async function toggleCompletion(skill) {
+  const newCompleted = !skill.completed;
+  // 完了にする場合は pinned=0 に
+  // 未完了に戻す場合は pinned はそのまま（要求通り★は戻さない）
+  let updateData = { completed: newCompleted };
+  if (newCompleted) {
+    updateData.pinned = 0;
+  }
+  await updateSkill(skill.id, updateData);
+  render();
 }
 
 // =============================
@@ -486,6 +547,7 @@ function handleImportFile(e) {
         store.put({
           ...record,
           pinned: Number(record.pinned) || 0,
+          completed: !!record.completed, // boolean化
           category: record.category || '',
           tags: record.tags || '',
           createdAt: record.createdAt || new Date(),
@@ -568,7 +630,7 @@ function setupTabs() {
 // =============================
 // 編集モーダル
 // =============================
-let backdropEl; 
+let backdropEl;
 let editModalEl;
 let editSkillId;
 
@@ -677,12 +739,13 @@ function closeEditModal() {
 // =============================
 // チャット風入力欄のセットアップ
 // =============================
+
 function setupChatInput() {
   const chatInput = document.getElementById('chat-input');
   const pinnedLevelSelect = document.getElementById('chat-pinned-level');
 
   // 下書き復元
-  loadDraftFromLocalStorage();  
+  loadDraftFromLocalStorage();
 
   // 入力中にドラフト保存
   chatInput.addEventListener('input', saveChatDraft);
@@ -704,7 +767,7 @@ function setupChatInput() {
       // 送信後: 入力欄リセット & ドラフトクリア
       chatInput.value = '';
       pinnedLevelSelect.value = '0';
-      clearDraftFromLocalStorage(); 
+      clearDraftFromLocalStorage();
 
       // 再描画
       render();

@@ -173,6 +173,17 @@ hr {
   color: #8D6E63;
 }
 
+/* 追加: 完了状態のスタイル */
+.skill-item.completed {
+  background: #9E9E9E !important; /* 暗めの色 */
+  border-color: #757575;
+  color: #FFFFFF;
+}
+.skill-item.completed:hover {
+  background: #7E7E7E !important;
+}
+
+/* 操作ボタン */
 .skill-actions {
   margin-top: 0.25rem;
   display: flex;
@@ -354,6 +365,7 @@ hr {
   width: 80px;
   text-align: center;
 }
+
 /* Pinnedタブ用フィルターのコンテナ */
 #pinned-filter-area {
   display: none; /* 初期は非表示（Pinnedタブの時だけ表示） */
