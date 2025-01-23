@@ -1,52 +1,53 @@
-/* Hackerっぽいモノスペースフォントをインポート（ネット接続がある場合） */
+/* 例としてモノスペースフォントをそのまま使用 */
 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
-/* グリッチ風アニメーション */
+/* グリッチ風アニメーション（色をオレンジ系に変更） */
 @keyframes glitch {
   0% {
-    text-shadow: 2px 0 green, -2px 0 lime;
+    text-shadow: 2px 0 #FFA000, -2px 0 #FFD54F;
   }
   20% {
-    text-shadow: -2px 0 lime, 2px 0 green;
+    text-shadow: -2px 0 #FFA000, 2px 0 #FFD54F;
   }
   40% {
-    text-shadow: 2px 0 green, -2px 0 lime;
+    text-shadow: 2px 0 #FFA000, -2px 0 #FFD54F;
   }
   60% {
-    text-shadow: -2px 0 lime, 2px 0 green;
+    text-shadow: -2px 0 #FFA000, 2px 0 #FFD54F;
   }
   80% {
-    text-shadow: 2px 0 green, -2px 0 lime;
+    text-shadow: 2px 0 #FFA000, -2px 0 #FFD54F;
   }
   100% {
-    text-shadow: 2px 0 green, -2px 0 lime;
+    text-shadow: 2px 0 #FFA000, -2px 0 #FFD54F;
   }
 }
 
+/* ベース */
 body {
   margin: 0;
   padding: 0.5rem;
   width: 340px; /* ポップアップの横幅（適宜調整） */
-  background: #000000;
-  color: #00ff00; /* ネオングリーン */
-  font-family: 'Share Tech Mono', monospace;  
+  background: #FFF8E1; /* 薄い黄色系 */
+  color: #5D4037;      /* 見やすいよう濃いめのブラウン */
+  font-family: 'Share Tech Mono', monospace;
   line-height: 1.4;
 }
 
-/* タイトル：グリッチ風に点滅させる */
+/* タイトル：グリッチ風にオレンジでアニメーション */
 h1 {
   font-size: 1.2rem;
   text-align: center;
   margin-top: 0;
-  color: #00ff00;
+  color: #FFA000;       /* オレンジ */
   animation: glitch 2s infinite;
 }
 
-/* 横線もハッカー風に */
+/* 横線 */
 hr {
   border: none;
   height: 1px;
-  background: #00ff00;
+  background: #FFA000; /* オレンジ */
   margin: 0.5rem 0;
 }
 
@@ -63,65 +64,21 @@ hr {
   padding: 0.4rem;
   font-size: 0.8rem;
   cursor: pointer;
-  border: 1px solid #00ff00;
-  background: #000000;
-  color: #00ff00;
+  border: 1px solid #FFA000;
+  background: #FFE0B2;
+  color: #5D4037;
   transition: background 0.2s, color 0.2s;
 }
 .tab-btn:hover {
-  background: #00ff0044;
+  background: #FFD699;
 }
 .tab-btn.active {
-  background: #00ff00;
-  color: #000000;
-  border-bottom: 2px solid #ff00ff; /* ちょっと毒々しい感じ */
+  background: #FFA000;
+  color: #FFFFFF;
+  border-bottom: 2px solid #FF7043; /* 差し色 */
 }
 
-/* フォーム */
-form {
-  background: #001100;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #00ff00;
-}
-
-form > div {
-  margin-bottom: 0.5rem;
-}
-
-label {
-  display: inline-block;
-  width: 70px;
-  font-size: 0.9rem;
-  color: #00ff00;
-}
-
-input[type="text"],
-textarea,
-select[type="text"] {
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
-  padding: 0.2rem;
-  font-family: 'Share Tech Mono', monospace;
-}
-textarea {
-  resize: none;
-}
-
-button[type="submit"] {
-  background: #00ff00;
-  color: #000;
-  border: none;
-  padding: 0.3rem 0.6rem;
-  cursor: pointer;
-  font-weight: bold;
-}
-button[type="submit"]:hover {
-  background: #ccffcc;
-}
-
-/* フィルターやコントロールエリア */
+/* フィルターエリア */
 #filter-area,
 #control-area {
   display: flex;
@@ -130,6 +87,7 @@ button[type="submit"]:hover {
   margin-bottom: 0.5rem;
 }
 
+/* フィルター項目 */
 #filter-area div {
   display: flex;
   align-items: center;
@@ -138,74 +96,82 @@ button[type="submit"]:hover {
 
 #filter-area select,
 #control-area select {
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
+  background: #FFF3E0;
+  color: #5D4037;
+  border: 1px solid #FFA000;
+  padding: 0.2rem;
 }
+
+/* Clearボタン */
 #clear-filter-btn {
-  background: #ff00ff;
-  color: #fff;
+  background: #FFB74D;
+  color: #FFF;
   border: none;
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   font-weight: bold;
 }
 #clear-filter-btn:hover {
-  background: #ff88ff;
+  background: #FF9800;
+}
+
+/* 日付ソートのselect */
+#sort-order {
+  min-width: 80px;
 }
 
 /* エクスポート/インポートボタン */
 #export-import-box button {
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
+  background: #FFE0B2;
+  color: #5D4037;
+  border: 1px solid #FFA000;
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   font-weight: bold;
 }
 #export-import-box button:hover {
-  background: #00ff0044;
+  background: #FFD699;
 }
 
-/* スキル一覧(またはMonthly)領域 */
+/* スキル一覧(またはMonthly)表示領域 */
 #skill-list,
 #monthly-view {
   max-height: 220px;
   overflow-y: auto;
-  border: 1px solid #00ff00;
+  border: 1px solid #FFA000;
   border-radius: 4px;
   padding: 0.5rem;
-  background: #001100;
+  background: #FFF3E0;
 }
 
 /* 各スキルアイテム */
 .skill-item {
-  background: #002200;
+  background: #FFE0B2;
   margin: 0.25rem 0;
   padding: 0.5rem;
   border-radius: 4px;
   position: relative;
-  border: 1px solid #00ff00;
+  border: 1px solid #FFA000;
 }
 .skill-item:hover {
-  background: #003300;
+  background: #FFD699;
 }
 
 .skill-item h2 {
   margin: 0;
   font-size: 1rem;
-  color: #00ff00;
+  color: #BF360C; /* 文字を少し濃い色に */
 }
 .skill-item p {
   margin: 0.25rem 0 0;
   font-size: 0.9rem;
-  color: #ccffcc;
+  color: #6D4C41;
 }
 .skill-item small {
   display: block;
   font-size: 0.7rem;
   margin-top: 0.25rem;
-  color: #66ff66;
+  color: #8D6E63;
 }
 
 .skill-actions {
@@ -216,12 +182,12 @@ button[type="submit"]:hover {
 .skill-actions button {
   font-size: 0.7rem;
   padding: 0.2rem 0.3rem;
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
+  background: #FFE0B2;
+  color: #5D4037;
+  border: 1px solid #FFA000;
 }
 .skill-actions button:hover {
-  background: #00ff0044;
+  background: #FFD699;
 }
 
 /* ピンマーク */
@@ -231,13 +197,13 @@ button[type="submit"]:hover {
   right: 8px;
   cursor: pointer;
   font-size: 1.2rem;
-  color: #00ff00;
+  color: #FFB300;
 }
 .pin-icon.gray {
-  color: #006600;
+  color: #EFEBE9; /* 薄いグレー風 */
 }
 .pin-icon.gold {
-  color: #ffff00;
+  color: #FFD700; /* ゴールド */
 }
 
 /* 編集用モーダル */
@@ -247,19 +213,19 @@ button[type="submit"]:hover {
   left: 50%;
   width: 280px;
   transform: translate(-50%, -50%);
-  background: #001100;
-  border: 2px solid #00ff00;
+  background: #FFF3E0;
+  border: 2px solid #FFA000;
   padding: 1rem;
   z-index: 999;
   border-radius: 6px;
-  box-shadow: 0 4px 12px #00ff00;
+  box-shadow: 0 4px 12px rgba(255, 160, 0, 0.6);
 }
 
 .edit-modal h2 {
   margin-top: 0;
   font-size: 1rem;
   text-align: center;
-  color: #00ff00;
+  color: #BF360C;
 }
 
 .edit-modal .modal-field {
@@ -268,32 +234,34 @@ button[type="submit"]:hover {
 
 .edit-modal label {
   width: auto;
-  color: #00ff00;
+  color: #5D4037;
 }
 
 .edit-modal input[type="text"],
 .edit-modal textarea {
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
+  background: #FFE8CC;
+  color: #5D4037;
+  border: 1px solid #FFA000;
   font-family: 'Share Tech Mono', monospace;
+  width: 100%;
 }
 
+/* モーダルのボタン */
 .modal-buttons {
   text-align: right;
   margin-top: 0.5rem;
 }
 
 .modal-buttons button {
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
+  background: #FFE0B2;
+  color: #5D4037;
+  border: 1px solid #FFA000;
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   font-weight: bold;
 }
 .modal-buttons button:hover {
-  background: #00ff0044;
+  background: #FFD699;
 }
 
 /* モーダルの背景 */
@@ -301,7 +269,7 @@ button[type="submit"]:hover {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  background: rgba(0,255,0,0.2);
+  background: rgba(255,160,0,0.1);
   z-index: 998;
   display: none;
 }
@@ -318,14 +286,14 @@ button[type="submit"]:hover {
   font-weight: bold;
   margin: 0.25rem 0;
   cursor: pointer;
-  background: #002200;
+  background: #FFE0B2;
   padding: 0.3rem;
   border-radius: 4px;
-  border: 1px solid #00ff00;
-  color: #00ff00;
+  border: 1px solid #FFA000;
+  color: #5D4037;
 }
 .month-header:hover {
-  background: #003300;
+  background: #FFD699;
 }
 .month-list {
   margin-left: 1rem;
@@ -334,28 +302,29 @@ button[type="submit"]:hover {
 .month-list.open {
   display: block;
 }
-/* 追加: チャット入力エリア */
+
+/* チャット入力エリア */
 #chat-input-area {
   display: flex;
   align-items: flex-start;
   gap: 0.5rem;
   margin-top: 0.5rem;
   padding: 0.3rem;
-  background: #001100;
-  border: 1px solid #00ff00;
+  background: #FFE0B2;
+  border: 1px solid #FFA000;
   border-radius: 4px;
 }
 
 #chat-input {
   flex: 1;
-  background: #000000;
-  color: #00ff00;
-  border: 1px solid #00ff00;
+  background: #FFE8CC;
+  color: #5D4037;
+  border: 1px solid #FFA000;
   font-family: 'Share Tech Mono', monospace;
   padding: 0.4rem;
-  resize: none; /* サイズはユーザーが変えられないように */
-  min-height: 32px; /* 最低の高さ */
-  max-height: 100px; /* 伸びすぎ防止 */
+  resize: none; /* サイズ固定 */
+  min-height: 32px;
+  max-height: 100px;
   overflow-y: auto;
 }
 
@@ -364,6 +333,5 @@ button[type="submit"]:hover {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  color: #00ff00;
+  color: #5D4037;
 }
-
