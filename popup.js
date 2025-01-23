@@ -160,14 +160,15 @@ function deleteSkill(id) {
 // =============================
 // メイン描画
 // =============================
-async function render() {
-  // 「Monthly」タブかどうかで切り替え
+// forceScroll が true の時のみリストを下までスクロールする
+async function render(forceScroll = false) {
   if (currentTab === 'monthly') {
     document.getElementById('skill-list').style.display = 'none';
     document.getElementById('monthly-view').style.display = 'block';
     // Pinnedフィルター UI は隠す
     document.getElementById('pinned-filter-area').style.display = 'none';
-    renderMonthlyView();
+
+    await renderMonthlyView(forceScroll);
   } else {
     document.getElementById('skill-list').style.display = 'block';
     document.getElementById('monthly-view').style.display = 'none';
@@ -179,15 +180,20 @@ async function render() {
       document.getElementById('pinned-filter-area').style.display = 'none';
     }
 
-    renderSkillList();
+    await renderSkillList(forceScroll);
   }
 }
 
 /**
  * スキル一覧を描画 (All or Pinnedタブ用)
+ * @param {boolean} forceScroll - trueなら描画後にリストを一番下までスクロールする
  */
-async function renderSkillList() {
+async function renderSkillList(forceScroll) {
   const listEl = document.getElementById('skill-list');
+
+  // 現在のスクロール位置を保持
+  const currentScroll = listEl.scrollTop;
+
   listEl.innerHTML = '';
 
   let skills = await getSkills();
@@ -239,10 +245,10 @@ async function renderSkillList() {
     pinSpan.textContent = getPinStarString(Number(skill.pinned));
     // クリックでレベルを1つ上げ(0～5ループ)
     pinSpan.addEventListener('click', () => {
-      // 完了済みならピン操作できないようにする場合はここでreturnしてもOK
-      // 今回は特に指定ないので、完了でも★の変更は可能(ただし完了すると再描画時に0に戻る)
+      // 完了済みでも操作可能にしているが、要件次第で無効化も可
       const newLevel = (Number(skill.pinned) + 1) % 6; // 0～5
-      updateSkill(skill.id, { pinned: newLevel }).then(() => render());
+      // 変更時はスクロール維持 => forceScroll=false
+      updateSkill(skill.id, { pinned: newLevel }).then(() => render(false));
     });
     item.appendChild(pinSpan);
 
@@ -274,7 +280,9 @@ async function renderSkillList() {
     // ★ 完了/未完了 切り替えボタン
     const toggleCompleteBtn = document.createElement('button');
     toggleCompleteBtn.textContent = skill.completed ? '未完了' : '完了';
-    toggleCompleteBtn.addEventListener('click', () => toggleCompletion(skill));
+    toggleCompleteBtn.addEventListener('click', () => {
+      toggleCompletion(skill, false); // 変更時はスクロール維持
+    });
     actionsEl.appendChild(toggleCompleteBtn);
 
     const editBtn = document.createElement('button');
@@ -287,7 +295,8 @@ async function renderSkillList() {
     delBtn.addEventListener('click', async () => {
       if (confirm('削除しますか？')) {
         await deleteSkill(skill.id);
-        render();
+        // 削除時もスクロール維持
+        render(false);
       }
     });
     actionsEl.appendChild(delBtn);
@@ -296,15 +305,24 @@ async function renderSkillList() {
     listEl.appendChild(item);
   });
 
-  // スクロール位置を一番下に移動
-  listEl.scrollTop = listEl.scrollHeight;
+  // 強制スクロールのフラグが true の場合のみ下までスクロール
+  if (forceScroll) {
+    listEl.scrollTop = listEl.scrollHeight;
+  } else {
+    // それ以外の場合は現在のスクロール位置を維持
+    listEl.scrollTop = currentScroll;
+  }
 }
 
 /**
  * 月別ビューを描画
+ * @param {boolean} forceScroll - trueなら描画後にMonthlyビューを一番下までスクロールする
  */
-async function renderMonthlyView() {
+async function renderMonthlyView(forceScroll) {
   const monthlyEl = document.getElementById('monthly-view');
+  // 現在のスクロール位置
+  const currentScroll = monthlyEl.scrollTop;
+
   monthlyEl.innerHTML = '';
 
   let skills = await getSkills();
@@ -377,7 +395,8 @@ async function renderMonthlyView() {
       pinSpan.textContent = getPinStarString(Number(skill.pinned));
       pinSpan.addEventListener('click', () => {
         const newLevel = (Number(skill.pinned) + 1) % 6;
-        updateSkill(skill.id, { pinned: newLevel }).then(() => render());
+        // ピン変更時はスクロール維持 => false
+        updateSkill(skill.id, { pinned: newLevel }).then(() => render(false));
       });
       item.appendChild(pinSpan);
 
@@ -409,7 +428,9 @@ async function renderMonthlyView() {
       // 完了/未完了 切り替え
       const toggleCompleteBtn = document.createElement('button');
       toggleCompleteBtn.textContent = skill.completed ? '未完了' : '完了';
-      toggleCompleteBtn.addEventListener('click', () => toggleCompletion(skill));
+      toggleCompleteBtn.addEventListener('click', () => {
+        toggleCompletion(skill, false); // スクロール維持
+      });
       actionsEl.appendChild(toggleCompleteBtn);
 
       const editBtn = document.createElement('button');
@@ -422,7 +443,7 @@ async function renderMonthlyView() {
       delBtn.addEventListener('click', async () => {
         if (confirm('削除しますか？')) {
           await deleteSkill(skill.id);
-          render();
+          render(false);
         }
       });
       actionsEl.appendChild(delBtn);
@@ -440,6 +461,14 @@ async function renderMonthlyView() {
 
     monthlyEl.appendChild(block);
   });
+
+  // 描画終了後、forceScroll が true の場合のみ下までスクロール
+  if (forceScroll) {
+    monthlyEl.scrollTop = monthlyEl.scrollHeight;
+  } else {
+    // それ以外は元の位置を維持
+    monthlyEl.scrollTop = currentScroll;
+  }
 }
 
 /**
@@ -455,16 +484,17 @@ function getPinStarString(level) {
 // =============================
 // 完了/未完了のトグル
 // =============================
-async function toggleCompletion(skill) {
+async function toggleCompletion(skill, forceScroll = false) {
   const newCompleted = !skill.completed;
   // 完了にする場合は pinned=0 に
-  // 未完了に戻す場合は pinned はそのまま（要求通り★は戻さない）
+  // 未完了に戻す場合は pinned はそのまま
   let updateData = { completed: newCompleted };
   if (newCompleted) {
     updateData.pinned = 0;
   }
   await updateSkill(skill.id, updateData);
-  render();
+  // トグル時はスクロール動作を呼び出し元で指定
+  render(forceScroll);
 }
 
 // =============================
@@ -477,11 +507,13 @@ function setupFilterArea() {
 
   categorySelect.addEventListener('change', () => {
     selectedCategory = categorySelect.value;
-    render();
+    // フィルター変更後は強制スクロールしたい場合は render(true)でも可
+    // 今回はフィルター変更時も位置維持なら false
+    render(true);
   });
   tagSelect.addEventListener('change', () => {
     selectedTag = tagSelect.value;
-    render();
+    render(true);
   });
 
   clearBtn.addEventListener('click', () => {
@@ -489,7 +521,7 @@ function setupFilterArea() {
     selectedTag = '';
     categorySelect.value = '';
     tagSelect.value = '';
-    render();
+    render(true);
   });
 }
 
@@ -502,7 +534,8 @@ function setupControls() {
 
   sortSelect.addEventListener('change', () => {
     sortOrder = sortSelect.value;
-    render();
+    // ソート変更後は一番下にスクロールして見たい場合はtrue
+    render(true);
   });
 
   const exportBtn = document.getElementById('export-btn');
@@ -556,7 +589,8 @@ function handleImportFile(e) {
       }
       tx.oncomplete = () => {
         alert('インポート完了');
-        render();
+        // インポート後、リスト全体を見やすくするならスクロールする => true
+        render(true);
         buildCategoryTagOptions();
       };
       tx.onerror = () => {
@@ -615,7 +649,8 @@ function setupTabs() {
       tabButtons.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       currentTab = btn.dataset.target;
-      render();
+      // タブ切り替え時は下までスクロールしたい => render(true)
+      render(true);
     });
   });
 
@@ -623,7 +658,8 @@ function setupTabs() {
   const pinnedFilterSelect = document.getElementById('pinned-filter');
   pinnedFilterSelect.addEventListener('change', () => {
     pinnedFilter = pinnedFilterSelect.value; // 'any', '1'..'5'
-    render();
+    // フィルター変更 => リスト下部表示したいなら true
+    render(true);
   });
 }
 
@@ -723,7 +759,8 @@ async function handleEditSave() {
   });
 
   closeEditModal();
-  render();
+  // 編集保存後もスクロール維持
+  render(false);
   buildCategoryTagOptions();
 }
 
@@ -769,8 +806,8 @@ function setupChatInput() {
       pinnedLevelSelect.value = '0';
       clearDraftFromLocalStorage();
 
-      // 再描画
-      render();
+      // 新規追加時には一番下に追加されるので、下までスクロールしたい => true
+      render(true);
       buildCategoryTagOptions();
     }
   });
@@ -824,8 +861,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // チャットUIのセットアップ
   setupChatInput();
 
-  // 最初に ALL タブを表示
+  // 最初の表示は ALL タブをアクティブにして強制スクロール
   currentTab = 'all';
   document.querySelector('.tab-btn[data-target="all"]')?.classList.add('active');
-  await render();
+  await render(true);
 });
