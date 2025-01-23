@@ -3,15 +3,20 @@
 // =============================
 let db;
 
-// ★ デフォルトは古い順("asc")に変更
-let sortOrder = 'asc';     
+// ★ デフォルトは古い順("asc")にする
+let sortOrder = 'asc'; 
 
 // 検索条件
 let selectedCategory = '';
 let selectedTag = '';
 
 // タブ管理
-let currentTab = 'all';  // "all", "pinned", "monthly"
+let currentTab = 'all'; // "all", "pinned", "monthly"
+
+// ★追加: ピン止めレベルのフィルター（Pinnedタブ専用）
+// 'any' なら「★1～★5すべて」
+// '1','2','3','4','5' ならそのレベルのみ表示
+let pinnedFilter = 'any';
 
 // メモ途中保存用: 最後に自動追記したクリップボード内容を保持
 let lastClipboard = '';
@@ -21,13 +26,15 @@ let lastClipboard = '';
 // =============================
 function initDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('skillDB', 3);
+    // DBバージョン: 4
+    const request = indexedDB.open('skillDB', 4);
 
     request.onupgradeneeded = (e) => {
       db = e.target.result;
       if (!db.objectStoreNames.contains('skillStore')) {
         db.createObjectStore('skillStore', { keyPath: 'id', autoIncrement: true });
       }
+      // 既存のstoreがある場合のマイグレーション等は省略
     };
 
     request.onsuccess = (e) => {
@@ -43,8 +50,9 @@ function initDB() {
 
 /**
  * 新規スキルを追加
+ * pinnedLevel: 0～5
  */
-function addSkill(title, content, category, tags, pinned) {
+function addSkill(title, content, category, tags, pinnedLevel) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(['skillStore'], 'readwrite');
     const store = tx.objectStore('skillStore');
@@ -53,7 +61,7 @@ function addSkill(title, content, category, tags, pinned) {
       content: content,
       category: category || '',
       tags: tags || '',
-      pinned: pinned || false,
+      pinned: Number(pinnedLevel) || 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -91,15 +99,18 @@ function getSkillById(id) {
 
 /**
  * スキル更新
+ * pinnedも0～5の数値
  */
 function updateSkill(id, newData) {
   return new Promise(async (resolve, reject) => {
     const skill = await getSkillById(id);
     if (!skill) return reject(new Error('Skill not found'));
 
+    // 既存データ + 上書き
     const updatedRecord = {
       ...skill,
       ...newData,
+      pinned: (newData.pinned !== undefined) ? Number(newData.pinned) : skill.pinned,
       updatedAt: new Date(),
     };
 
@@ -128,13 +139,24 @@ function deleteSkill(id) {
 // メイン描画
 // =============================
 async function render() {
+  // 「Monthly」タブかどうかで切り替え
   if (currentTab === 'monthly') {
     document.getElementById('skill-list').style.display = 'none';
     document.getElementById('monthly-view').style.display = 'block';
+    // Pinnedフィルター UI は隠す
+    document.getElementById('pinned-filter-area').style.display = 'none';
     renderMonthlyView();
   } else {
     document.getElementById('skill-list').style.display = 'block';
     document.getElementById('monthly-view').style.display = 'none';
+
+    // ★ Pinnedタブならピンレベルフィルターを表示
+    if (currentTab === 'pinned') {
+      document.getElementById('pinned-filter-area').style.display = 'block';
+    } else {
+      document.getElementById('pinned-filter-area').style.display = 'none';
+    }
+
     renderSkillList();
   }
 }
@@ -148,38 +170,52 @@ async function renderSkillList() {
 
   let skills = await getSkills();
 
-  // フィルタリング: Category, Tag
+  // (1) Categoryフィルタ
   if (selectedCategory) {
     skills = skills.filter(s => s.category === selectedCategory);
   }
+  // (2) Tagフィルタ
   if (selectedTag) {
-    skills = skills.filter(s => s.tags.split(',').map(t => t.trim()).includes(selectedTag));
+    skills = skills.filter(s => {
+      const tagArr = s.tags.split(',').map(t => t.trim());
+      return tagArr.includes(selectedTag);
+    });
   }
 
-  // Pinnedタブの場合、pinned==true のみ
+  // (3) タブごと分岐
   if (currentTab === 'pinned') {
-    skills = skills.filter(s => s.pinned);
+    // pinned>0 が前提
+    skills = skills.filter(s => Number(s.pinned) > 0);
+
+    // ★追加: pinnedFilter の指定がある場合さらに絞る
+    if (pinnedFilter !== 'any') {
+      const pinnedNum = Number(pinnedFilter);
+      skills = skills.filter(s => s.pinned === pinnedNum);
+    }
   }
 
-  // ソート
+  // (4) ソート（createdAt）
   skills.sort((a, b) => {
     const timeA = new Date(a.createdAt).getTime();
     const timeB = new Date(b.createdAt).getTime();
     return (sortOrder === 'asc') ? (timeA - timeB) : (timeB - timeA);
   });
 
+  // (5) 一覧描画
   skills.forEach(skill => {
     const item = document.createElement('div');
     item.className = 'skill-item';
 
-    // ピン留めアイコン
-    const pinIcon = document.createElement('span');
-    pinIcon.className = 'pin-icon ' + (skill.pinned ? 'gold' : 'gray');
-    pinIcon.textContent = '★';
-    pinIcon.addEventListener('click', () => {
-      updateSkill(skill.id, { pinned: !skill.pinned }).then(() => render());
+    // ピン留めアイコン: ★1～★5を文字列化
+    const pinSpan = document.createElement('span');
+    pinSpan.className = 'pin-icon';
+    pinSpan.textContent = getPinStarString(Number(skill.pinned));
+    // クリックでレベルを1つ上げ(0～5ループ)
+    pinSpan.addEventListener('click', () => {
+      const newLevel = (Number(skill.pinned) + 1) % 6; // 0～5
+      updateSkill(skill.id, { pinned: newLevel }).then(() => render());
     });
-    item.appendChild(pinIcon);
+    item.appendChild(pinSpan);
 
     // タイトル
     const titleEl = document.createElement('h2');
@@ -202,7 +238,7 @@ async function renderSkillList() {
     dateEl.textContent = `作成日時: ${dateObj.toLocaleString()}`;
     item.appendChild(dateEl);
 
-    // 操作ボタン群
+    // 操作ボタン
     const actionsEl = document.createElement('div');
     actionsEl.className = 'skill-actions';
 
@@ -238,22 +274,25 @@ async function renderMonthlyView() {
 
   let skills = await getSkills();
 
-  // フィルタ（category/tag）
+  // (1) Category/Tag フィルタ
   if (selectedCategory) {
     skills = skills.filter(s => s.category === selectedCategory);
   }
   if (selectedTag) {
-    skills = skills.filter(s => s.tags.split(',').map(t => t.trim()).includes(selectedTag));
+    skills = skills.filter(s => {
+      const tagArr = s.tags.split(',').map(t => t.trim());
+      return tagArr.includes(selectedTag);
+    });
   }
 
-  // ソート
+  // (2) ソート
   skills.sort((a, b) => {
     const timeA = new Date(a.createdAt).getTime();
     const timeB = new Date(b.createdAt).getTime();
     return (sortOrder === 'asc') ? (timeA - timeB) : (timeB - timeA);
   });
 
-  // 年月ごとにグルーピング
+  // (3) 年月ごとにグルーピング
   const groupMap = {};
   skills.forEach(s => {
     const d = new Date(s.createdAt);
@@ -264,11 +303,12 @@ async function renderMonthlyView() {
     groupMap[ym].push(s);
   });
 
-  // 年月キーをソート
+  // (4) 年月キーをソート
   const sortedKeys = Object.keys(groupMap).sort((a, b) => {
     return (sortOrder === 'asc') ? a.localeCompare(b) : b.localeCompare(a);
   });
 
+  // (5) 描画
   sortedKeys.forEach(ym => {
     const [year, month] = ym.split('-');
     const headingText = `${year}年${Number(month)}月`;
@@ -291,14 +331,15 @@ async function renderMonthlyView() {
       const item = document.createElement('div');
       item.className = 'skill-item';
 
-      // ピン留め
-      const pinIcon = document.createElement('span');
-      pinIcon.className = 'pin-icon ' + (skill.pinned ? 'gold' : 'gray');
-      pinIcon.textContent = '★';
-      pinIcon.addEventListener('click', () => {
-        updateSkill(skill.id, { pinned: !skill.pinned }).then(() => render());
+      // ピン留めアイコン
+      const pinSpan = document.createElement('span');
+      pinSpan.className = 'pin-icon';
+      pinSpan.textContent = getPinStarString(Number(skill.pinned));
+      pinSpan.addEventListener('click', () => {
+        const newLevel = (Number(skill.pinned) + 1) % 6;
+        updateSkill(skill.id, { pinned: newLevel }).then(() => render());
       });
-      item.appendChild(pinIcon);
+      item.appendChild(pinSpan);
 
       // タイトル
       const titleEl = document.createElement('h2');
@@ -355,106 +396,14 @@ async function renderMonthlyView() {
   });
 }
 
-// =============================
-// 登録フォーム
-// =============================
-function setupForm() {
-  const form = document.getElementById('skill-form');
-
-  // (1) フォーム送信
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = document.getElementById('title').value.trim();
-    const content = document.getElementById('content').value.trim();
-    const category = document.getElementById('category').value.trim();
-    const tags = document.getElementById('tags').value.trim();
-    const pinned = document.getElementById('pinned').checked;
-
-    if (!title) {
-      alert('タイトルを入力してください。');
-      return;
-    }
-
-    await addSkill(title, content, category, tags, pinned);
-
-    // 登録成功→下書きをクリア
-    clearDraftFromLocalStorage();
-
-    // フォーム初期化
-    document.getElementById('title').value = '';
-    document.getElementById('content').value = '';
-    document.getElementById('category').value = '';
-    document.getElementById('tags').value = '';
-    document.getElementById('pinned').checked = false;
-
-    render();
-    buildCategoryTagOptions();
-  });
-
-  // (2) 入力のたびに下書きを保存
-  ['title', 'content', 'category', 'tags', 'pinned'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el.type === 'checkbox') {
-      el.addEventListener('change', saveDraftToLocalStorage);
-    } else {
-      el.addEventListener('input', saveDraftToLocalStorage);
-    }
-  });
-}
-
-// 下書きを保存 (localStorage)
-function saveDraftToLocalStorage() {
-  const draft = {
-    title: document.getElementById('title').value,
-    content: document.getElementById('content').value,
-    category: document.getElementById('category').value,
-    tags: document.getElementById('tags').value,
-    pinned: document.getElementById('pinned').checked
-  };
-  localStorage.setItem('skillDraft', JSON.stringify(draft));
-}
-
-
-
-// 下書きをクリア
-function clearDraftFromLocalStorage() {
-  localStorage.removeItem('skillDraft');
-}
-
-// =============================
-// カテゴリ/タグのプルダウンを作る
-// =============================
-async function buildCategoryTagOptions() {
-  const skills = await getSkills();
-  const categorySet = new Set();
-  const tagSet = new Set();
-
-  skills.forEach(s => {
-    if (s.category) categorySet.add(s.category);
-    if (s.tags) {
-      s.tags.split(',').forEach(t => tagSet.add(t.trim()));
-    }
-  });
-
-  // categoryセレクト
-  const categorySelect = document.getElementById('category-select');
-  categorySelect.innerHTML = '<option value="">(All)</option>';
-  Array.from(categorySet).sort().forEach(cat => {
-    const option = document.createElement('option');
-    option.value = cat;
-    option.textContent = cat;
-    categorySelect.appendChild(option);
-  });
-
-  // tagセレクト
-  const tagSelect = document.getElementById('tag-select');
-  tagSelect.innerHTML = '<option value="">(All)</option>';
-  Array.from(tagSet).sort().forEach(tag => {
-    const option = document.createElement('option');
-    option.value = tag;
-    option.textContent = tag;
-    tagSelect.appendChild(option);
-  });
+/**
+ * pinned(0～5) を "★☆☆☆☆" のような文字列に変換
+ */
+function getPinStarString(level) {
+  if (!level) return '☆×5'; // 0ならピン無し表示
+  const full = '★★★★★'; 
+  const empty = '☆☆☆☆☆';
+  return full.slice(0, level) + empty.slice(level);
 }
 
 // =============================
@@ -536,7 +485,7 @@ function handleImportFile(e) {
       for (const record of data) {
         store.put({
           ...record,
-          pinned: !!record.pinned,
+          pinned: Number(record.pinned) || 0,
           category: record.category || '',
           tags: record.tags || '',
           createdAt: record.createdAt || new Date(),
@@ -559,7 +508,43 @@ function handleImportFile(e) {
 }
 
 // =============================
-// タブ切り替え
+// カテゴリ/タグのプルダウンを作る
+// =============================
+async function buildCategoryTagOptions() {
+  const skills = await getSkills();
+  const categorySet = new Set();
+  const tagSet = new Set();
+
+  skills.forEach(s => {
+    if (s.category) categorySet.add(s.category);
+    if (s.tags) {
+      s.tags.split(',').forEach(t => tagSet.add(t.trim()));
+    }
+  });
+
+  // categoryセレクト
+  const categorySelect = document.getElementById('category-select');
+  categorySelect.innerHTML = '<option value="">(All)</option>';
+  Array.from(categorySet).sort().forEach(cat => {
+    const option = document.createElement('option');
+    option.value = cat;
+    option.textContent = cat;
+    categorySelect.appendChild(option);
+  });
+
+  // tagセレクト
+  const tagSelect = document.getElementById('tag-select');
+  tagSelect.innerHTML = '<option value="">(All)</option>';
+  Array.from(tagSet).sort().forEach(tag => {
+    const option = document.createElement('option');
+    option.value = tag;
+    option.textContent = tag;
+    tagSelect.appendChild(option);
+  });
+}
+
+// =============================
+// タブ切り替え + Pinned Filter
 // =============================
 function setupTabs() {
   const tabButtons = document.querySelectorAll('.tab-btn');
@@ -570,6 +555,13 @@ function setupTabs() {
       currentTab = btn.dataset.target;
       render();
     });
+  });
+
+  // ★ Pinnedフィルターセレクト
+  const pinnedFilterSelect = document.getElementById('pinned-filter');
+  pinnedFilterSelect.addEventListener('change', () => {
+    pinnedFilter = pinnedFilterSelect.value; // 'any', '1'..'5'
+    render();
   });
 }
 
@@ -590,7 +582,7 @@ async function openEditModal(skillId) {
   document.getElementById('edit-content').value = skill.content;
   document.getElementById('edit-category').value = skill.category;
   document.getElementById('edit-tags').value = skill.tags;
-  document.getElementById('edit-pinned').checked = skill.pinned;
+  document.getElementById('edit-pinned-level').value = skill.pinned || 0;
 
   backdropEl.classList.add('active');
 }
@@ -611,24 +603,31 @@ function createEditModalElements() {
   editModalEl.innerHTML = `
     <h2>スキルを編集</h2>
     <div class="modal-field">
-      <label>タイトル: </label>
+      <label>タイトル:</label>
       <input id="edit-title" type="text" />
     </div>
     <div class="modal-field">
-      <label>内容: </label>
+      <label>内容:</label>
       <textarea id="edit-content" rows="2"></textarea>
     </div>
     <div class="modal-field">
-      <label>カテゴリ: </label>
+      <label>カテゴリ:</label>
       <input id="edit-category" type="text" />
     </div>
     <div class="modal-field">
-      <label>タグ: </label>
+      <label>タグ:</label>
       <input id="edit-tags" type="text" />
     </div>
     <div class="modal-field">
-      <label>ピン留め: </label>
-      <input id="edit-pinned" type="checkbox" />
+      <label>ピン止めレベル:</label>
+      <select id="edit-pinned-level">
+        <option value="0">なし(0)</option>
+        <option value="1">★1</option>
+        <option value="2">★★2</option>
+        <option value="3">★★★3</option>
+        <option value="4">★★★★4</option>
+        <option value="5">★★★★★5</option>
+      </select>
     </div>
     <div class="modal-buttons">
       <button id="edit-save-btn">保存</button>
@@ -646,7 +645,7 @@ async function handleEditSave() {
   const newContent = document.getElementById('edit-content').value.trim();
   const newCategory = document.getElementById('edit-category').value.trim();
   const newTags = document.getElementById('edit-tags').value.trim();
-  const newPinned = document.getElementById('edit-pinned').checked;
+  const newPinnedLevel = Number(document.getElementById('edit-pinned-level').value);
 
   if (!newTitle) {
     alert('タイトルを入力してください。');
@@ -658,7 +657,7 @@ async function handleEditSave() {
     content: newContent,
     category: newCategory,
     tags: newTags,
-    pinned: newPinned,
+    pinned: newPinnedLevel,
   });
 
   closeEditModal();
@@ -676,54 +675,18 @@ function closeEditModal() {
 }
 
 // =============================
-// クリップボードから自動追記
-// =============================
-
-/**
- * フォーカス時やクリック時にクリップボードを読み取り、内容を未挿入なら追記する
- */
-async function checkClipboardAndAppend() {
-  if (!navigator.clipboard) return; // ブラウザ対応状況など
-
-  try {
-    const text = await navigator.clipboard.readText();
-    if (text && text !== lastClipboard) {
-      lastClipboard = text;
-      // textarea に追記
-      const contentField = document.getElementById('content');
-      if (contentField) {
-        // すでに何かあれば改行を挿入
-        contentField.value += (contentField.value ? '\n' : '') + text;
-        saveDraftToLocalStorage(); // 途中保存も更新
-      }
-    }
-  } catch (err) {
-    console.warn('Clipboard read error:', err);
-  }
-}
-
-function setupClipboardAutoAppend() {
-  // ポップアップにフォーカスが戻ったらチェック
-  window.addEventListener('focus', checkClipboardAndAppend);
-
-  // あるいは、フォームをクリックしたときにもチェックしたいなら
-  const contentField = document.getElementById('content');
-  contentField.addEventListener('click', checkClipboardAndAppend);
-}
-
-// =============================
 // チャット風入力欄のセットアップ
 // =============================
 function setupChatInput() {
   const chatInput = document.getElementById('chat-input');
-  const pinnedChk = document.getElementById('chat-pinned');
+  const pinnedLevelSelect = document.getElementById('chat-pinned-level');
 
   // 下書き復元
   loadDraftFromLocalStorage();  
 
   // 入力中にドラフト保存
   chatInput.addEventListener('input', saveChatDraft);
-  pinnedChk.addEventListener('change', saveChatDraft);
+  pinnedLevelSelect.addEventListener('change', saveChatDraft);
 
   // Enter送信 / Shift+Enterで改行
   chatInput.addEventListener('keydown', async (e) => {
@@ -732,15 +695,15 @@ function setupChatInput() {
       const content = chatInput.value.trim();
       if (!content) return;
 
-      // pinned情報
-      const pinned = pinnedChk.checked;
+      // pinnedLevel情報
+      const pinnedLevel = Number(pinnedLevelSelect.value) || 0;
 
       // DB保存: title="ChatMemo", category="", tags=""
-      await addSkill("ChatMemo", content, "", "", pinned);
+      await addSkill("ChatMemo", content, "", "", pinnedLevel);
 
       // 送信後: 入力欄リセット & ドラフトクリア
       chatInput.value = '';
-      pinnedChk.checked = false;
+      pinnedLevelSelect.value = '0';
       clearDraftFromLocalStorage(); 
 
       // 再描画
@@ -754,7 +717,7 @@ function setupChatInput() {
 function saveChatDraft() {
   const draft = {
     content: document.getElementById('chat-input').value,
-    pinned: document.getElementById('chat-pinned').checked
+    pinned: document.getElementById('chat-pinned-level').value
   };
   localStorage.setItem('chatDraft', JSON.stringify(draft));
 }
@@ -767,7 +730,7 @@ function loadDraftFromLocalStorage() {
     const draft = JSON.parse(draftStr);
     if (draft && typeof draft === 'object') {
       document.getElementById('chat-input').value = draft.content || '';
-      document.getElementById('chat-pinned').checked = !!draft.pinned;
+      document.getElementById('chat-pinned-level').value = draft.pinned || '0';
     }
   } catch (err) {
     console.warn('Error parsing chatDraft:', err);
@@ -784,21 +747,22 @@ function clearDraftFromLocalStorage() {
 // =============================
 document.addEventListener('DOMContentLoaded', async () => {
   await initDB();
-  console.log('initDB 完了')
+  console.log('initDB 完了');
 
-  // 初期セットアップ
+  // タブ切り替え
   setupTabs();
+  // フィルター/カテゴリ・タグ関連
   setupFilterArea();
+  // ソート + エクスポート/インポート
   setupControls();
+  // カテゴリ・タグを初期構築
   await buildCategoryTagOptions();
-  console.log('カテゴリタグ構築完了')
-  //setupClipboardAutoAppend();
 
-  // チャットUIなど使うなら:
-   setupChatInput();
+  // チャットUIのセットアップ
+  setupChatInput();
 
-  // ★ 最初に ALL を明示し、即座に表示
+  // 最初に ALL タブを表示
   currentTab = 'all';
   document.querySelector('.tab-btn[data-target="all"]')?.classList.add('active');
-  await render(); // 確実に非同期処理が完了した後に描画
+  await render();
 });

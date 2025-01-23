@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Skill Manager Extension</title>
+  <!-- CSSを外部ファイルとして読み込む -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -13,6 +14,19 @@
     <button class="tab-btn active" data-target="all">All</button>
     <button class="tab-btn" data-target="pinned">Pinned</button>
     <button class="tab-btn" data-target="monthly">Monthly</button>
+  </div>
+
+  <!-- ★ 追加: Pinnedタブ専用のピンレベルフィルター -->
+  <div id="pinned-filter-area">
+    <label for="pinned-filter">Pin Filter:</label>
+    <select id="pinned-filter">
+      <option value="any">Any(★1～★5)</option>
+      <option value="1">★1</option>
+      <option value="2">★★2</option>
+      <option value="3">★★★3</option>
+      <option value="4">★★★★4</option>
+      <option value="5">★★★★★5</option>
+    </select>
   </div>
 
   <!-- 絞り込み: カテゴリー & タグ -->
@@ -60,12 +74,22 @@
   <!-- チャット風メモ入力エリア (一番下) -->
   <div id="chat-input-area">
     <textarea id="chat-input" rows="1" placeholder="メモを入力（Enterで送信、Shift+Enterで改行）"></textarea>
-    <div class="pinned-check">
-      <label for="chat-pinned">★Pin</label>
-      <input type="checkbox" id="chat-pinned" />
+
+    <!-- ピン止めレベル（★1〜★5）を選ぶドロップダウン -->
+    <div class="pinned-select">
+      <label for="chat-pinned-level">Pin:</label>
+      <select id="chat-pinned-level">
+        <option value="0">無し</option>
+        <option value="1">★1</option>
+        <option value="2">★★2</option>
+        <option value="3">★★★3</option>
+        <option value="4">★★★★4</option>
+        <option value="5">★★★★★5</option>
+      </select>
     </div>
   </div>
 
+  <!-- メインのJSファイル -->
   <script src="popup.js"></script>
 </body>
 </html>
